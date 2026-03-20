@@ -1,0 +1,20 @@
+{
+  "name": "@wysiwyg/editor-core",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/editor-core.cjs",
+  "module": "dist/editor-core.js",
+  "exports": {
+    ".": {
+      "import": "./dist/editor-core.js",
+      "require": "./dist/editor-core.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

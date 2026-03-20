@@ -1,0 +1,10 @@
+{
+  "name": "wysiwyg",
+  "private": true,
+  "workspaces": ["editor-core", "plugins/*", "framework-adapters/*", "tests"],
+  "scripts": {
+    "build": "npm run build --workspace=editor-core",
+    "test": "npm run test --workspace=tests",
+    "demo": "cd demo && npx serve ."
+  }
+}

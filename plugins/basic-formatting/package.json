@@ -1,0 +1,6 @@
+{
+  "name": "@wysiwyg/basic-formatting",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js"
+}

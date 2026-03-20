@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WYSIWYG Editor Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: #666;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .panel-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      padding: 10px 16px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+
+    /* ── Editor Styles ── */
+    .wysiwyg-editor {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wysiwyg-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 10px;
+      background: #1e1e2e;
+      border-bottom: 1px solid #333;
+    }
+
+    .wysiwyg-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 30px;
+      padding: 0 7px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #cdd6f4;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .wysiwyg-btn:hover {
+      background: #313244;
+      color: #fff;
+    }
+
+    .wysiwyg-btn.active {
+      background: #7c3aed;
+      color: #fff;
+    }
+
+    .wysiwyg-separator {
+      display: inline-block;
+      width: 1px;
+      height: 20px;
+      background: #444;
+      margin: 0 4px;
+      vertical-align: middle;
+    }
+
+    .wysiwyg-content {
+      min-height: 320px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 20px 24px;
+      outline: none;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #2d2d2d;
+    }
+
+    .wysiwyg-content:empty::before {
+      content: attr(data-placeholder);
+      color: #aaa;
+      pointer-events: none;
+    }
+
+    .wysiwyg-content h1 { font-size: 1.9em; margin: 0.8em 0 0.4em; line-height: 1.2; }
+    .wysiwyg-content h2 { font-size: 1.5em; margin: 0.8em 0 0.4em; line-height: 1.3; }
+    .wysiwyg-content h3 { font-size: 1.2em; margin: 0.8em 0 0.4em; }
+    .wysiwyg-content p  { margin: 0.5em 0; }
+
+    .wysiwyg-content ul,
+    .wysiwyg-content ol { padding-left: 1.8em; margin: 0.5em 0; }
+    .wysiwyg-content li { margin: 0.25em 0; }
+
+    .wysiwyg-content blockquote {
+      border-left: 4px solid #7c3aed;
+      margin: 0.8em 0;
+      padding: 8px 16px;
+      background: #f5f0ff;
+      color: #555;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .wysiwyg-content pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 8px;
+      padding: 14px 18px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.88em;
+      margin: 0.8em 0;
+    }
+
+    .wysiwyg-content code {
+      background: #f0eaff;
+      color: #7c3aed;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88em;
+    }
+
+    .wysiwyg-content pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+
+    .wysiwyg-content a {
+      color: #7c3aed;
+      text-decoration: underline;
+    }
+
+    .wysiwyg-content img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin: 4px 0;
+    }
+
+    .wysiwyg-content hr {
+      border: none;
+      border-top: 2px solid #e8e8f0;
+      margin: 1em 0;
+    }
+
+    .wysiwyg-content.drag-over {
+      outline: 2px dashed #7c3aed;
+      outline-offset: -4px;
+    }
+
+    /* ── HTML Output ── */
+    #html-output {
+      min-height: 320px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 16px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #2d2d2d;
+      background: #fafafa;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      padding: 8px 16px;
+      border-top: 1px solid #eee;
+      background: #fafafa;
+      font-size: 0.78rem;
+      color: #888;
+    }
+
+    .stats-bar span strong { color: #555; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>✦ WYSIWYG Editor</h1>
+  <p>A modern, lightweight rich text editor — TinyMCE alternative built from scratch</p>
+</header>
+
+<div class="layout">
+  <div class="panel">
+    <div class="panel-label">Editor</div>
+    <div id="editor"></div>
+    <div class="stats-bar">
+      <span>Words: <strong id="word-count">0</strong></span>
+      <span>Chars: <strong id="char-count">0</strong></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">HTML Output (live)</div>
+    <div id="html-output"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline implementation of the WYSIWYG editor (no build step needed)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── EventEmitter ──
+class EventEmitter {
+  constructor() { this._events = new Map(); }
+  on(e, h) { if (!this._events.has(e)) this._events.set(e, []); this._events.get(e).push(h); return this; }
+  off(e, h) { if (!this._events.has(e)) return this; this._events.set(e, this._events.get(e).filter(x => x !== h)); return this; }
+  emit(e, ...a) { if (!this._events.has(e)) return; for (const h of this._events.get(e)) h(...a); }
+}
+
+// ── History ──
+class History {
+  constructor() { this._stack = []; this._index = -1; this._t = null; }
+  push(state) {
+    clearTimeout(this._t);
+    this._t = setTimeout(() => {
+      this._stack = this._stack.slice(0, this._index + 1);
+      this._stack.push(state);
+      if (this._stack.length > 100) this._stack.shift();
+      this._index = this._stack.length - 1;
+    }, 300);
+  }
+  pushImmediate(state) {
+    clearTimeout(this._t);
+    this._stack = this._stack.slice(0, this._index + 1);
+    this._stack.push(state);
+    if (this._stack.length > 100) this._stack.shift();
+    this._index = this._stack.length - 1;
+  }
+  undo() { if (this._index > 0) return this._stack[--this._index]; return null; }
+  redo() { if (this._index < this._stack.length - 1) return this._stack[++this._index]; return null; }
+}
+
+// ── Sanitizer ──
+const ALLOWED_TAGS = new Set(['p','br','strong','b','em','i','u','strike','s','del','h1','h2','h3','h4','h5','h6','ul','ol','li','blockquote','pre','code','a','img','table','thead','tbody','tr','th','td','div','span','hr','sub','sup','mark']);
+const ALLOWED_ATTRS = { 'a':['href','title','target','rel'], 'img':['src','alt','width','height','title','style'], 'td':['colspan','rowspan'], 'th':['colspan','rowspan'], 'code':['class'], 'pre':['class'], 'span':['class','style'], 'div':['class'], '*':['class'] };
+const DANGEROUS = new Set(['script','style','iframe','object','embed','form','input','button','select','textarea','meta','link','base']);
+
+function sanitizeHTML(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  sanitizeNode(doc.body);
+  return doc.body.innerHTML;
+}
+function sanitizeNode(node) {
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const tag = child.tagName.toLowerCase();
+    if (DANGEROUS.has(tag)) { node.removeChild(child); continue; }
+    if (!ALLOWED_TAGS.has(tag)) {
+      while (child.firstChild) node.insertBefore(child.firstChild, child);
+      node.removeChild(child); continue;
+    }
+    for (const attr of Array.from(child.attributes)) {
+      const a = attr.name.toLowerCase();
+      if (a.startsWith('on')) { child.removeAttribute(attr.name); continue; }
+      const allowed = ALLOWED_ATTRS[tag] || [];
+      if (!allowed.includes(a) && !(ALLOWED_ATTRS['*']||[]).includes(a)) { child.removeAttribute(attr.name); continue; }
+      if (a === 'href' || a === 'src') {
+        const v = attr.value.trim().toLowerCase().replace(/\s/g,'');
+        if (v.startsWith('javascript:') || v.startsWith('data:') || v.startsWith('vbscript:')) child.removeAttribute(attr.name);
+      }
+    }
+    sanitizeNode(child);
+  }
+}
+
+// ── PluginManager ──
+class PluginManager {
+  constructor(editor) { this.editor = editor; this.plugins = new Map(); this._btns = []; }
+  register(plugin) {
+    if (!plugin || !plugin.name) return;
+    this.plugins.set(plugin.name, plugin);
+    if (plugin.commands) {
+      for (const [name, def] of Object.entries(plugin.commands)) {
+        this.editor.registerCommand(name, { ...def, exec: (e,o) => def.exec(e,o), isActive: (e,o) => def.isActive ? def.isActive(e,o) : false });
+        if (def.shortcut) this.editor._shortcuts.set(def.shortcut.toLowerCase().replace('cmd','ctrl'), name);
+      }
+    }
+    if (plugin.toolbar) for (const b of plugin.toolbar) this._btns.push(b);
+    if (plugin.init) plugin.init(this.editor);
+  }
+  getToolbarButtons() { return this._btns; }
+}
+
+// ── Editor ──
+class Editor {
+  constructor({ element, plugins = [], placeholder = 'Start writing...' }) {
+    this.container = typeof element === 'string' ? document.querySelector(element) : element;
+    this.plugins = plugins;
+    this.placeholder = placeholder;
+    this.emitter = new EventEmitter();
+    this.history = new History();
+    this.pluginManager = new PluginManager(this);
+    this._commands = new Map();
+    this._shortcuts = new Map();
+    this._init();
+  }
+  _init() {
+    this.container.classList.add('wysiwyg-editor');
+    this.toolbarEl = document.createElement('div');
+    this.toolbarEl.className = 'wysiwyg-toolbar';
+    this.container.appendChild(this.toolbarEl);
+    this.editorEl = document.createElement('div');
+    this.editorEl.className = 'wysiwyg-content';
+    this.editorEl.contentEditable = 'true';
+    this.editorEl.setAttribute('data-placeholder', this.placeholder);
+    this.container.appendChild(this.editorEl);
+    for (const p of this.plugins) this.pluginManager.register(p);
+    this._buildToolbar();
+    this._bindEvents();
+    this.history.pushImmediate(this.editorEl.innerHTML);
+  }
+  _buildToolbar() {
+    this.toolbarEl.innerHTML = '';
+    for (const btn of this.pluginManager.getToolbarButtons()) {
+      if (btn.type === 'separator') {
+        const sep = document.createElement('span');
+        sep.className = 'wysiwyg-separator';
+        this.toolbarEl.appendChild(sep);
+        continue;
+      }
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'wysiwyg-btn';
+      b.setAttribute('data-command', btn.command);
+      b.title = btn.title || btn.label;
+      b.innerHTML = btn.icon || btn.label;
+      b.addEventListener('mousedown', e => { e.preventDefault(); this.exec(btn.command, btn.options || {}); });
+      this.toolbarEl.appendChild(b);
+    }
+  }
+  _updateToolbar() {
+    this.toolbarEl.querySelectorAll('[data-command]').forEach(btn => {
+      const cmd = this._commands.get(btn.getAttribute('data-command'));
+      if (cmd && cmd.isActive) btn.classList.toggle('active', !!cmd.isActive(this));
+    });
+  }
+  _bindEvents() {
+    this.editorEl.addEventListener('input', () => {
+      this.history.push(this.editorEl.innerHTML);
+      this.emitter.emit('change', { html: this.getHTML() });
+    });
+    this.editorEl.addEventListener('keydown', e => this._handleKeydown(e));
+    this.editorEl.addEventListener('paste', e => this._handlePaste(e));
+    this.editorEl.addEventListener('focus', () => this.emitter.emit('focus'));
+    this.editorEl.addEventListener('blur', () => this.emitter.emit('blur'));
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === this.editorEl || this.editorEl.contains(document.activeElement)) {
+        this._updateToolbar();
+        this.emitter.emit('selectionchange');
+      }
+    });
+  }
+  _handleKeydown(e) {
+    const key = (e.ctrlKey||e.metaKey ? 'ctrl+':'') + (e.shiftKey ? 'shift+':'') + e.key.toLowerCase();
+    if (this._shortcuts.has(key)) { e.preventDefault(); this.exec(this._shortcuts.get(key)); return; }
+    if ((e.ctrlKey||e.metaKey) && !e.shiftKey) {
+      if (e.key.toLowerCase() === 'z') { e.preventDefault(); this.undo(); return; }
+      if (e.key.toLowerCase() === 'y') { e.preventDefault(); this.redo(); return; }
+    }
+    if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); this.redo(); }
+  }
+  _handlePaste(e) {
+    e.preventDefault();
+    const html = e.clipboardData.getData('text/html');
+    const text = e.clipboardData.getData('text/plain');
+    if (html) { document.execCommand('insertHTML', false, sanitizeHTML(html)); }
+    else if (text) { document.execCommand('insertText', false, text); }
+    this.history.push(this.editorEl.innerHTML);
+    this.emitter.emit('change', { html: this.getHTML() });
+  }
+  registerCommand(name, def) {
+    this._commands.set(name, def);
+    if (def.shortcut) this._shortcuts.set(def.shortcut.toLowerCase().replace('cmd','ctrl'), name);
+  }
+  exec(command, options = {}) {
+    const cmd = this._commands.get(command);
+    if (cmd) {
+      this.editorEl.focus();
+      cmd.exec(this, options);
+      this.history.push(this.editorEl.innerHTML);
+      this._updateToolbar();
+      this.emitter.emit('change', { html: this.getHTML() });
+    }
+  }
+  getHTML() { return this.editorEl.innerHTML; }
+  setHTML(html) { this.editorEl.innerHTML = sanitizeHTML(html); this.history.pushImmediate(this.editorEl.innerHTML); }
+  undo() { const s = this.history.undo(); if (s !== null) { this.editorEl.innerHTML = s; this.emitter.emit('change', { html: this.getHTML() }); } }
+  redo() { const s = this.history.redo(); if (s !== null) { this.editorEl.innerHTML = s; this.emitter.emit('change', { html: this.getHTML() }); } }
+  on(e, h) { this.emitter.on(e, h); }
+  off(e, h) { this.emitter.off(e, h); }
+  destroy() { this.container.innerHTML = ''; this.container.classList.remove('wysiwyg-editor'); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugins (inline)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const basicFormattingPlugin = {
+  name: 'basic-formatting',
+  commands: {
+    bold:          { exec() { document.execCommand('bold'); },          isActive() { try { return document.queryCommandState('bold'); } catch(e){return false;} }, shortcut:'ctrl+b' },
+    italic:        { exec() { document.execCommand('italic'); },        isActive() { try { return document.queryCommandState('italic'); } catch(e){return false;} }, shortcut:'ctrl+i' },
+    underline:     { exec() { document.execCommand('underline'); },     isActive() { try { return document.queryCommandState('underline'); } catch(e){return false;} }, shortcut:'ctrl+u' },
+    strikethrough: { exec() { document.execCommand('strikeThrough'); }, isActive() { try { return document.queryCommandState('strikeThrough'); } catch(e){return false;} } },
+  },
+  toolbar: [
+    { command:'bold',          label:'<b>B</b>',   title:'Bold (Ctrl+B)' },
+    { command:'italic',        label:'<i>I</i>',   title:'Italic (Ctrl+I)' },
+    { command:'underline',     label:'<u>U</u>',   title:'Underline (Ctrl+U)' },
+    { command:'strikethrough', label:'<s>S</s>',   title:'Strikethrough' },
+  ]
+};
+
+const blockElementsPlugin = {
+  name: 'block-elements',
+  commands: {
+    'heading-1':   { exec() { document.execCommand('formatBlock',false,'h1'); }, isActive() { try { return document.queryCommandValue('formatBlock')==='h1'; } catch(e){return false;} } },
+    'heading-2':   { exec() { document.execCommand('formatBlock',false,'h2'); }, isActive() { try { return document.queryCommandValue('formatBlock')==='h2'; } catch(e){return false;} } },
+    'heading-3':   { exec() { document.execCommand('formatBlock',false,'h3'); }, isActive() { try { return document.queryCommandValue('formatBlock')==='h3'; } catch(e){return false;} } },
+    'paragraph':   { exec() { document.execCommand('formatBlock',false,'p');  }, isActive() { try { return document.queryCommandValue('formatBlock')==='p';  } catch(e){return false;} } },
+    'bulletList':  { exec() { document.execCommand('insertUnorderedList'); }, isActive() { try { return document.queryCommandState('insertUnorderedList'); } catch(e){return false;} } },
+    'orderedList': { exec() { document.execCommand('insertOrderedList');   }, isActive() { try { return document.queryCommandState('insertOrderedList');   } catch(e){return false;} } },
+    'blockquote':  { exec() { document.execCommand('formatBlock',false,'blockquote'); }, isActive() { try { return document.queryCommandValue('formatBlock')==='blockquote'; } catch(e){return false;} } },
+  },
+  toolbar: [
+    { type:'separator' },
+    { command:'heading-1',   label:'H1',      title:'Heading 1' },
+    { command:'heading-2',   label:'H2',      title:'Heading 2' },
+    { command:'heading-3',   label:'H3',      title:'Heading 3' },
+    { command:'paragraph',   label:'¶',       title:'Paragraph' },
+    { type:'separator' },
+    { command:'bulletList',  label:'• List',  title:'Bullet List' },
+    { command:'orderedList', label:'1. List', title:'Ordered List' },
+    { command:'blockquote',  label:'❝',       title:'Blockquote' },
+  ]
+};
+
+function escapeAttr(s) { return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const imagePlugin = {
+  name: 'image',
+  commands: {
+    image: {
+      exec(editor, { src, alt } = {}) {
+        const imgSrc = src || prompt('Enter image URL:');
+        if (!imgSrc) return;
+        document.execCommand('insertHTML', false, `<img src="${escapeAttr(imgSrc)}" alt="${escapeAttr(alt||'')}" style="max-width:100%" />`);
+      },
+      isActive() { return false; }
+    }
+  },
+  toolbar: [
+    { type:'separator' },
+    { command:'image', label:'🖼', title:'Insert Image' },
+  ],
+  init(editor) {
+    editor.editorEl.addEventListener('dragover', e => { e.preventDefault(); editor.editorEl.classList.add('drag-over'); });
+    editor.editorEl.addEventListener('dragleave', () => editor.editorEl.classList.remove('drag-over'));
+    editor.editorEl.addEventListener('drop', e => {
+      e.preventDefault();
+      editor.editorEl.classList.remove('drag-over');
+      for (const file of e.dataTransfer.files) {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = evt => {
+            editor.editorEl.focus();
+            document.execCommand('insertHTML', false, `<img src="${evt.target.result}" alt="${escapeAttr(file.name)}" style="max-width:100%" />`);
+            editor.emitter.emit('change', { html: editor.getHTML() });
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    });
+  }
+};
+
+const linkPlugin = {
+  name: 'link',
+  commands: {
+    link: {
+      exec(editor, { url } = {}) {
+        const sel = window.getSelection();
+        const linkUrl = url || prompt('Enter URL (e.g. https://example.com):');
+        if (!linkUrl) return;
+        if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://') && !linkUrl.startsWith('/') && !linkUrl.startsWith('#')) {
+          alert('Please enter a valid URL starting with http://, https://, /, or #'); return;
+        }
+        if (sel && !sel.isCollapsed) {
+          document.execCommand('createLink', false, linkUrl);
+          editor.editorEl.querySelectorAll('a:not([target])').forEach(a => { a.target='_blank'; a.rel='noopener noreferrer'; });
+        } else {
+          document.execCommand('insertHTML', false, `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer">${escapeAttr(linkUrl)}</a>`);
+        }
+      },
+      isActive() {
+        const sel = window.getSelection();
+        if (!sel||!sel.anchorNode) return false;
+        let n = sel.anchorNode;
+        while (n && n !== document.body) { if (n.nodeName==='A') return true; n=n.parentNode; }
+        return false;
+      },
+      shortcut: 'ctrl+k',
+    },
+    unlink: { exec() { document.execCommand('unlink'); }, isActive() { return false; } }
+  },
+  toolbar: [
+    { command:'link',   label:'🔗', title:'Insert Link (Ctrl+K)' },
+    { command:'unlink', label:'✂', title:'Remove Link' },
+  ]
+};
+
+const codeBlockPlugin = {
+  name: 'code-block',
+  commands: {
+    codeBlock: {
+      exec(editor) {
+        document.execCommand('formatBlock', false, 'pre');
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          let node = sel.anchorNode;
+          while (node && node.nodeName !== 'PRE') node = node.parentNode;
+          if (node && node.nodeName==='PRE' && !node.querySelector('code')) {
+            const code = document.createElement('code');
+            code.className = 'language-js';
+            code.innerHTML = node.innerHTML;
+            node.innerHTML = '';
+            node.appendChild(code);
+          }
+        }
+      },
+      isActive() { try { return document.queryCommandValue('formatBlock')==='pre'; } catch(e){return false;} }
+    },
+    inlineCode: {
+      exec() {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return;
+        document.execCommand('insertHTML', false, `<code>${sel.toString()}</code>`);
+      },
+      isActive() {
+        const sel = window.getSelection();
+        if (!sel||!sel.anchorNode) return false;
+        let n = sel.anchorNode;
+        while (n && n !== document.body) { if (n.nodeName==='CODE') return true; n=n.parentNode; }
+        return false;
+      }
+    },
+    horizontalRule: {
+      exec() { document.execCommand('insertHorizontalRule'); },
+      isActive() { return false; }
+    }
+  },
+  toolbar: [
+    { type:'separator' },
+    { command:'codeBlock',      label:'&lt;/&gt;', title:'Code Block' },
+    { command:'inlineCode',     label:'`code`',    title:'Inline Code' },
+    { command:'horizontalRule', label:'―',         title:'Horizontal Rule' },
+  ]
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bootstrap the editor
+// ─────────────────────────────────────────────────────────────────────────────
+
+const editor = new Editor({
+  element: '#editor',
+  plugins: [basicFormattingPlugin, blockElementsPlugin, imagePlugin, linkPlugin, codeBlockPlugin],
+  placeholder: 'Start writing your story…',
+});
+
+// Set initial content
+editor.setHTML(`
+<h1>Welcome to the WYSIWYG Editor</h1>
+<p>This is a <strong>modern rich text editor</strong> built entirely from scratch — a lightweight <em>TinyMCE alternative</em> with no heavy dependencies.</p>
+<h2>Features</h2>
+<ul>
+  <li><strong>Formatting:</strong> Bold, italic, underline, strikethrough</li>
+  <li><strong>Block elements:</strong> Headings (H1–H3), paragraphs, blockquotes</li>
+  <li><strong>Lists:</strong> Bullet and ordered lists</li>
+  <li><strong>Links &amp; images:</strong> Insert and manage links and images</li>
+  <li><strong>Code:</strong> Code blocks and inline code</li>
+  <li><strong>Undo / Redo:</strong> Full history with Ctrl+Z / Ctrl+Y</li>
+</ul>
+<h2>Keyboard Shortcuts</h2>
+<ul>
+  <li><code>Ctrl+B</code> — Bold</li>
+  <li><code>Ctrl+I</code> — Italic</li>
+  <li><code>Ctrl+U</code> — Underline</li>
+  <li><code>Ctrl+K</code> — Insert link</li>
+  <li><code>Ctrl+Z</code> — Undo</li>
+  <li><code>Ctrl+Y</code> — Redo</li>
+</ul>
+<h2>Code Example</h2>
+<pre><code class="language-js">const editor = new Editor({
+  element: '#editor',
+  plugins: [basicFormattingPlugin, blockElementsPlugin],
+  placeholder: 'Start writing…',
+});
+
+editor.on('change', ({ html }) =&gt; {
+  console.log('Content changed:', html);
+});</code></pre>
+<blockquote>Try editing this text — the HTML output updates in real time on the right panel.</blockquote>
+<hr />
+<p>Drag &amp; drop an image file onto the editor to insert it inline. 🖼</p>
+`);
+
+// Update HTML output panel
+const htmlOutput = document.getElementById('html-output');
+const wordCount  = document.getElementById('word-count');
+const charCount  = document.getElementById('char-count');
+
+function updateOutput() {
+  const html = editor.getHTML();
+  htmlOutput.textContent = html;
+  const text = editor.editorEl.textContent || '';
+  wordCount.textContent = text.trim() ? text.trim().split(/\s+/).length : 0;
+  charCount.textContent = text.length;
+}
+
+editor.on('change', updateOutput);
+updateOutput();
+</script>
+</body>
+</html>

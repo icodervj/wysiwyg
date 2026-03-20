@@ -1,0 +1,10 @@
+{
+  "name": "@wysiwyg/vue",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.vue",
+  "peerDependencies": {
+    "vue": ">=3.0.0",
+    "@wysiwyg/editor-core": "^1.0.0"
+  }
+}
