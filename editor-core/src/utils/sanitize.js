@@ -74,10 +74,11 @@ function sanitizeNode(node) {
 
         if (attrName === 'href' || attrName === 'src') {
           const val = attr.value.trim().toLowerCase().replace(/\s/g, '');
+          const isSafeDataUri = attrName === 'src' && /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp);base64,/.test(val);
           if (
             val.startsWith('javascript:') ||
-            val.startsWith('data:') ||
-            val.startsWith('vbscript:')
+            val.startsWith('vbscript:') ||
+            (val.startsWith('data:') && !isSafeDataUri)
           ) {
             child.removeAttribute(attr.name);
           }

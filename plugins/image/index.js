@@ -36,7 +36,7 @@ export default {
           const reader = new FileReader();
           reader.onload = (evt) => {
             editor.editorEl.focus();
-            document.execCommand('insertHTML', false, `<img src="${evt.target.result}" alt="${escapeAttr(file.name)}" style="max-width:100%" />`);
+            document.execCommand('insertHTML', false, `<img src="${escapeAttr(evt.target.result)}" alt="${escapeAttr(file.name)}" style="max-width:100%" />`);
             editor.emitter.emit('change', { html: editor.getHTML() });
           };
           reader.readAsDataURL(file);
