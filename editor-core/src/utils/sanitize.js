@@ -73,8 +73,17 @@ function sanitizeNode(node) {
         }
 
         if (attrName === 'href' || attrName === 'src') {
-          const val = attr.value.trim().toLowerCase().replace(/\s/g, '');
-          const isSafeDataUri = attrName === 'src' && /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp);base64,/.test(val);
+          // Decode percent-encoding and collapse whitespace to prevent bypass tricks
+          let val = attr.value.trim();
+          try { val = decodeURIComponent(val); } catch (_) { /* keep original if malformed */ }
+          val = val.replace(/[\s\u0000-\u001f\u007f]/g, '').toLowerCase();
+
+          // Allow base64 image data URIs (used by drag-drop image uploads).
+          // Validate full format: data:<safe-mime>;base64,<base64-chars>
+          const SAFE_DATA_URI_RE =
+            /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp);base64,[a-z0-9+/]+=*$/i;
+          const isSafeDataUri = attrName === 'src' && SAFE_DATA_URI_RE.test(attr.value.trim());
+
           if (
             val.startsWith('javascript:') ||
             val.startsWith('vbscript:') ||

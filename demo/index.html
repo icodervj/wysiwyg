@@ -314,8 +314,16 @@ function sanitizeNode(node) {
       const allowed = ALLOWED_ATTRS[tag] || [];
       if (!allowed.includes(a) && !(ALLOWED_ATTRS['*']||[]).includes(a)) { child.removeAttribute(attr.name); continue; }
       if (a === 'href' || a === 'src') {
-        const v = attr.value.trim().toLowerCase().replace(/\s/g,'');
-        if (v.startsWith('javascript:') || v.startsWith('data:') || v.startsWith('vbscript:')) child.removeAttribute(attr.name);
+        // Decode percent-encoding and collapse whitespace to prevent bypass tricks
+        let v = attr.value.trim();
+        try { v = decodeURIComponent(v); } catch (_) { /* keep original if malformed */ }
+        v = v.replace(/[\s\u0000-\u001f\u007f]/g, '').toLowerCase();
+        // Allow base64 image data URIs (e.g. from drag-drop); validate full format
+        const SAFE_DATA = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp);base64,[a-z0-9+/]+=*$/i;
+        const isSafeDataUri = a === 'src' && SAFE_DATA.test(attr.value.trim());
+        if (v.startsWith('javascript:') || v.startsWith('vbscript:') || (v.startsWith('data:') && !isSafeDataUri)) {
+          child.removeAttribute(attr.name);
+        }
       }
     }
     sanitizeNode(child);
